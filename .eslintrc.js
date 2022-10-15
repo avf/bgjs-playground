@@ -13,7 +13,7 @@ module.exports = {
         'plugin:@typescript-eslint/recommended',
         'plugin:@typescript-eslint/recommended-requiring-type-checking',
     ],
-    ignorePatterns: ['.eslintrc.js', 'bgjs/**'],
+    ignorePatterns: ['.eslintrc.js'],
     rules: {
         '@typescript-eslint/no-unsafe-member-access': 'off',
         '@typescript-eslint/no-unsafe-call': 'off',

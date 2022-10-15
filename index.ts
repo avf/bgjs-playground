@@ -1,5 +1,5 @@
 import * as _ from 'lodash'
-import * as BG from './bgjs/src/index';
+import * as BG from 'behavior-graph'
 import * as PIXI from 'pixi.js'
 
 // Fixes a problem with live reload in the parcel bundler. See this issue: https://github.com/parcel-bundler/parcel/issues/289
@@ -101,7 +101,7 @@ class GameExtent extends BG.Extent {
                         { x: Math.random() * (maxVelocity - minVelocity) + minVelocity, y: Math.random() * (maxVelocity - minVelocity) + minVelocity },
                         this,
                     );
-                    this.addChildLifetime(box as unknown as BG.Extent);
+                    this.addChildLifetime(box);
                     box.addToGraph();
                     this.boxes.value.push(box);
                     this.boxes.updateForce(this.boxes.value);
