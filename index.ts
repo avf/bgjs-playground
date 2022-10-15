@@ -23,14 +23,14 @@ class BoxExtent extends BG.Extent {
 
     graphics: PIXI.Graphics;
     game: GameExtent;
-    collisionMoment: BG.Moment<void>;
+    collisionMomentWithStartingPos: BG.Moment<Vec2>;
 
     constructor(graph: BG.Graph, initialPosition: Vec2, initialVelocity: Vec2, game: GameExtent) {
         super(graph);
         this.position = this.state(initialPosition);
         this.velocity = this.state(initialVelocity);
         this.game = game;
-        this.collisionMoment = this.moment();
+        this.collisionMomentWithStartingPos = this.moment();
 
         const blueBoxGraphics = new PIXI.Graphics();
         blueBoxGraphics.beginFill(0x0000FF);
@@ -41,19 +41,32 @@ class BoxExtent extends BG.Extent {
         // Collision handling
         this.behavior()
             .supplies(this.velocity)
-            .demands(this.collisionMoment)
+            .demands(this.collisionMomentWithStartingPos)
             .runs(() => {
-                if (this.collisionMoment.justUpdated) {
-                    this.velocity.update({ x: -this.velocity.value.x, y: -this.velocity.value.y })
+                if (this.collisionMomentWithStartingPos.justUpdated) {
+                    this.velocity.update({
+                        x: -this.velocity.value.x,
+                        y: -this.velocity.value.y
+                    });
                 }
             });
 
         // Box movement
         this.behavior()
             .supplies(this.position)
-            .demands(this.game.timerTick, this.velocity, this.addedToGraph)
+            .demands(this.game.timerTick, this.velocity, this.addedToGraph, this.collisionMomentWithStartingPos)
             .runs(() => {
-                this.position.update({ x: this.position.value.x + this.velocity.value.x, y: this.position.value.y + this.velocity.value.y });
+                if (this.collisionMomentWithStartingPos.justUpdated && this.collisionMomentWithStartingPos.value) {
+                    this.position.update({
+                        x: this.collisionMomentWithStartingPos.value.x,
+                        y: this.collisionMomentWithStartingPos.value.y
+                    });
+                } else {
+                    this.position.update({
+                        x: this.position.value.x + this.velocity.value.x,
+                        y: this.position.value.y + this.velocity.value.y
+                    });
+                }
             });
 
         // Box rendering update (is it better to separate it like this, or leave it with the timertick demand?)
@@ -139,15 +152,18 @@ class GameExtent extends BG.Extent {
                         for (const box of this.boxes.value) {
                             if (box.position.value.x < 0 || box.position.value.x > worldSize.x
                                 || box.position.value.y < 0 || box.position.value.y > worldSize.y) {
-                                box.collisionMoment.updateWithAction();
+                                const newX = Math.min(Math.max(box.position.value.x, 0), worldSize.x);
+                                const newY = Math.min(Math.max(box.position.value.y, 0), worldSize.y);
+                                box.collisionMomentWithStartingPos.updateWithAction({ x: newX, y: newY });
                             } else {
                                 for (const otherBox of this.boxes.value) {
                                     if (box === otherBox) {
                                         continue;
                                     }
                                     if (checkCollision(box.position.value, otherBox.position.value)) {
-                                        box.collisionMoment.updateWithAction();
-                                        otherBox.collisionMoment.updateWithAction();
+                                        // TODO: Calculate point of collision here and add it as the starting point to the update action
+                                        box.collisionMomentWithStartingPos.updateWithAction();
+                                        otherBox.collisionMomentWithStartingPos.updateWithAction();
                                     }
                                 }
                             }
