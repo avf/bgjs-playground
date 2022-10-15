@@ -10,36 +10,29 @@ if (module.hot) {
     })
 }
 
-type Position = {
+type Vec2 = {
     x: number,
     y: number,
 };
 
-const pixiContainer = document.querySelector("#pixi-container") as HTMLElement;
-const pixiApplication = new PIXI.Application({ resolution: window.devicePixelRatio, autoDensity: true, resizeTo: pixiContainer, antialias: true, backgroundColor: 0xFFFFFF });
-pixiApplication.renderer.plugins.interaction.autoPreventDefault = false;
-pixiApplication.renderer.view.style.touchAction = "auto";
-pixiContainer.appendChild(pixiApplication.view);
-const rootPixiContainer = new PIXI.Container();
-pixiApplication.stage.addChild(rootPixiContainer);
-
-
-const boxSize = 100;
-const blueBoxGraphics = new PIXI.Graphics();
-blueBoxGraphics.beginFill(0x0000FF);
-blueBoxGraphics.drawRect(0, 0, boxSize, boxSize);
-blueBoxGraphics.endFill();
-rootPixiContainer.addChild(blueBoxGraphics);
-
 class GameExtent extends BG.Extent {
     timerTick: BG.Moment<number>;
-    boxLocation: BG.State<Position>;
+    mouseClick: BG.Moment<Vec2>;
+    rootPixiContainer: PIXI.Container;
 
-    constructor(graph: BG.Graph) {
+    constructor(graph: BG.Graph, rootPixiContainer: PIXI.Container) {
         super(graph);
 
         this.timerTick = this.moment();
-        this.boxLocation = this.state({ x: 0, y: 0 });
+        this.mouseClick = this.moment();
+        document.addEventListener("click", (e) => {
+            this.mouseClick.updateWithAction({x: e.clientX, y: e.clientY});
+        });
+        // TODO: remove listener
+        this.rootPixiContainer = rootPixiContainer;
+
+
+        // TODO: Remove item from graph again
 
         // Logging behavior
         // this.behavior()
@@ -50,33 +43,84 @@ class GameExtent extends BG.Extent {
         //         });
         //     });
 
-        // Box movement
-        this.behavior()
-            .supplies(this.boxLocation)
-            .demands(this.timerTick)
-            .runs(() => {
-                this.boxLocation.update({ x: this.boxLocation.value.x + 1, y: this.boxLocation.value.y });
-                this.sideEffect(() => {
-                    blueBoxGraphics.position.x = this.boxLocation.value.x;
-                    blueBoxGraphics.position.y = this.boxLocation.value.y;
-                });
+
+    }
+
+    addToGraphWithAction(debugName?: string | undefined): void {
+        super.addToGraphWithAction(debugName);
+
+        this.action(() => {
+            const box1 = new BoxExtent(
+                this.graph,
+                { x: 0, y: 0 },
+                { x: 1, y: 0 },
+                this,
+            );
+            this.addChildLifetime(box1);
+            box1.addToGraph();
+            this.sideEffect(() => {
+                this.rootPixiContainer.addChild(box1.graphics);
             });
-
-        // Box rendering update (is it better to separate it like this, or leave it with the timertick demand?)
-        // this.behavior()
-        //     .demands(this.boxLocation)
-        //     .runs(() => {
-        //         this.sideEffect(() => {
-        //             blueBoxGraphics.position.x = this.boxLocation.value.x;
-        //             blueBoxGraphics.position.y = this.boxLocation.value.y;
-        //         });
-        //     });
-
+        });
     }
 }
 
+class BoxExtent extends BG.Extent {
+    position: BG.State<Vec2>;
+    velocity: BG.State<Vec2>;
+
+    graphics: PIXI.Graphics;
+    game: GameExtent;
+
+    constructor(graph: BG.Graph, initialPosition: Vec2, initialVelocity: Vec2, game: GameExtent) {
+        super(graph);
+        this.position = this.state(initialPosition);
+        this.velocity = this.state(initialVelocity);
+        this.game = game;
+
+        const boxSize = 100;
+        const blueBoxGraphics = new PIXI.Graphics();
+        blueBoxGraphics.beginFill(0x0000FF);
+        blueBoxGraphics.drawRect(0, 0, boxSize, boxSize);
+        blueBoxGraphics.endFill();
+        this.graphics = blueBoxGraphics;
+
+
+        // Box movement
+        this.behavior()
+            .supplies(this.position)
+            .demands(this.game.timerTick, this.velocity)
+            .runs(() => {
+                this.position.update({ x: this.position.value.x + this.velocity.value.x, y: this.position.value.y + this.velocity.value.y });
+            });
+
+        // Box rendering update (is it better to separate it like this, or leave it with the timertick demand?)
+        this.behavior()
+            .demands(this.position)
+            .runs(() => {
+                this.sideEffect(() => {
+                    blueBoxGraphics.position.x = this.position.value.x;
+                    blueBoxGraphics.position.y = this.position.value.y;
+                });
+            });
+    }
+}
+
+
+function initialPixiSetup(): PIXI.Container {
+    const pixiContainer = document.querySelector("#pixi-container") as HTMLElement;
+    const pixiApplication = new PIXI.Application({ resolution: window.devicePixelRatio, autoDensity: true, resizeTo: pixiContainer, antialias: true, backgroundColor: 0xFFFFFF });
+    pixiApplication.renderer.plugins.interaction.autoPreventDefault = false;
+    pixiApplication.renderer.view.style.touchAction = "auto";
+    pixiContainer.appendChild(pixiApplication.view);
+    const rootPixiContainer = new PIXI.Container();
+    pixiApplication.stage.addChild(rootPixiContainer);
+    return rootPixiContainer;
+}
+
+
 const g = new BG.Graph();
-const e = new GameExtent(g);
+const e = new GameExtent(g, initialPixiSetup());
 
 e.addToGraphWithAction();
 
@@ -93,3 +137,6 @@ window.requestAnimationFrame(time => {
     previousTime = time;
     window.requestAnimationFrame(loop);
 });
+
+
+
