@@ -15,55 +15,6 @@ type Vec2 = {
     y: number,
 };
 
-class GameExtent extends BG.Extent {
-    timerTick: BG.Moment<number>;
-    mouseClick: BG.Moment<Vec2>;
-    rootPixiContainer: PIXI.Container;
-
-    constructor(graph: BG.Graph, rootPixiContainer: PIXI.Container) {
-        super(graph);
-
-        this.timerTick = this.moment();
-        this.mouseClick = this.moment();
-        document.addEventListener("click", (e) => {
-            this.mouseClick.updateWithAction({x: e.clientX, y: e.clientY});
-        });
-        // TODO: remove listener
-        this.rootPixiContainer = rootPixiContainer;
-
-
-        // TODO: Remove item from graph again
-
-        // Logging behavior
-        // this.behavior()
-        //     .demands(this.timerTick)
-        //     .runs(() => {
-        //         this.sideEffect(() => {
-        //             console.log(this.boxLocation.value);
-        //         });
-        //     });
-
-
-    }
-
-    addToGraphWithAction(debugName?: string | undefined): void {
-        super.addToGraphWithAction(debugName);
-
-        this.action(() => {
-            const box1 = new BoxExtent(
-                this.graph,
-                { x: 0, y: 0 },
-                { x: 1, y: 0 },
-                this,
-            );
-            this.addChildLifetime(box1);
-            box1.addToGraph();
-            this.sideEffect(() => {
-                this.rootPixiContainer.addChild(box1.graphics);
-            });
-        });
-    }
-}
 
 class BoxExtent extends BG.Extent {
     position: BG.State<Vec2>;
@@ -89,7 +40,7 @@ class BoxExtent extends BG.Extent {
         // Box movement
         this.behavior()
             .supplies(this.position)
-            .demands(this.game.timerTick, this.velocity)
+            .demands(this.game.timerTick, this.velocity, this.addedToGraph)
             .runs(() => {
                 this.position.update({ x: this.position.value.x + this.velocity.value.x, y: this.position.value.y + this.velocity.value.y });
             });
@@ -117,6 +68,51 @@ function initialPixiSetup(): PIXI.Container {
     pixiApplication.stage.addChild(rootPixiContainer);
     return rootPixiContainer;
 }
+
+class GameExtent extends BG.Extent {
+    timerTick: BG.Moment<number>;
+    mouseClick: BG.Moment<Vec2>;
+    rootPixiContainer: PIXI.Container;
+    boxes: BG.State<BoxExtent[]>;
+
+    constructor(graph: BG.Graph, rootPixiContainer: PIXI.Container) {
+        super(graph);
+
+        this.timerTick = this.moment();
+        this.mouseClick = this.moment();
+        document.addEventListener("click", (e) => {
+            this.mouseClick.updateWithAction({ x: e.clientX, y: e.clientY });
+        });
+        // TODO: remove listener
+        this.rootPixiContainer = rootPixiContainer;
+        this.boxes = this.state([]);
+
+        this.behavior()
+            .supplies(this.boxes)
+            .demands(this.mouseClick)
+            .runs(() => {
+                if (this.mouseClick.justUpdated) {
+                    const minVelocity = -3;
+                    const maxVelocity = 3;
+
+                    const box = new BoxExtent(
+                        this.graph,
+                        { x: this.mouseClick.value!.x, y: this.mouseClick.value!.y },
+                        { x: Math.random() * (maxVelocity - minVelocity) + minVelocity, y: Math.random() * (maxVelocity - minVelocity) + minVelocity },
+                        this,
+                    );
+                    this.addChildLifetime(box);
+                    box.addToGraph();
+                    this.boxes.value.push(box);
+                    this.boxes.updateForce(this.boxes.value);
+                    this.sideEffect(() => {
+                        this.rootPixiContainer.addChild(box.graphics);
+                    });
+                }
+            });
+    }
+}
+
 
 
 const g = new BG.Graph();
