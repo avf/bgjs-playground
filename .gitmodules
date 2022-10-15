@@ -1,0 +1,3 @@
+[submodule "bgjs"]
+	path = bgjs
+	url = git@github.com:avf/bgjs.git

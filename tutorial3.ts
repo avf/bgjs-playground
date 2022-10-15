@@ -1,4 +1,4 @@
-import * as bg from 'behavior-graph';
+import * as bg from './bgjs/src/index';
 
 class ListExtent extends bg.Extent {
     save: bg.Moment<string>;
@@ -27,7 +27,7 @@ class ListExtent extends bg.Extent {
             .runs(() => {
                 if (this.save.justUpdated && this.selected.traceValue === null) {
                     const item = new ItemExtent(this.graph, this.save.value!, this);
-                    this.addChildLifetime(item);
+                    this.addChildLifetime(item as unknown as bg.Extent);
                     item.addToGraph();
                     this.allItems.value.push(item);
                     this.allItems.updateForce(this.allItems.value);
