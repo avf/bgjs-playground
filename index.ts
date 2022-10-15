@@ -15,6 +15,7 @@ type Vec2 = {
     y: number,
 };
 
+const boxSize = 100;
 
 class BoxExtent extends BG.Extent {
     position: BG.State<Vec2>;
@@ -22,20 +23,30 @@ class BoxExtent extends BG.Extent {
 
     graphics: PIXI.Graphics;
     game: GameExtent;
+    collisionMoment: BG.Moment<void>;
 
     constructor(graph: BG.Graph, initialPosition: Vec2, initialVelocity: Vec2, game: GameExtent) {
         super(graph);
         this.position = this.state(initialPosition);
         this.velocity = this.state(initialVelocity);
         this.game = game;
+        this.collisionMoment = this.moment();
 
-        const boxSize = 100;
         const blueBoxGraphics = new PIXI.Graphics();
         blueBoxGraphics.beginFill(0x0000FF);
         blueBoxGraphics.drawRect(0, 0, boxSize, boxSize);
         blueBoxGraphics.endFill();
         this.graphics = blueBoxGraphics;
 
+        // Collision handling
+        this.behavior()
+            .supplies(this.velocity)
+            .demands(this.collisionMoment)
+            .runs(() => {
+                if (this.collisionMoment.justUpdated) {
+                    this.velocity.update({ x: -this.velocity.value.x, y: -this.velocity.value.y })
+                }
+            });
 
         // Box movement
         this.behavior()
@@ -54,6 +65,7 @@ class BoxExtent extends BG.Extent {
                     blueBoxGraphics.position.y = this.position.value.y;
                 });
             });
+
     }
 }
 
@@ -74,6 +86,7 @@ class GameExtent extends BG.Extent {
     mouseClick: BG.Moment<Vec2>;
     rootPixiContainer: PIXI.Container;
     boxes: BG.State<BoxExtent[]>;
+    worldSize: BG.State<Vec2>;
 
     constructor(graph: BG.Graph, rootPixiContainer: PIXI.Container) {
         super(graph);
@@ -86,6 +99,7 @@ class GameExtent extends BG.Extent {
         // TODO: remove listener
         this.rootPixiContainer = rootPixiContainer;
         this.boxes = this.state([]);
+        this.worldSize = this.state({ x: 800, y: 800 });
 
         this.behavior()
             .supplies(this.boxes)
@@ -110,7 +124,53 @@ class GameExtent extends BG.Extent {
                     });
                 }
             });
+
+
+        // Collision detection
+        this.behavior()
+            .demands(this.timerTick, this.worldSize, this.boxes)
+            .dynamicDemands([this.boxes], () => {
+                return this.boxes.value.map(box => box.position);
+            })
+            .runs(() => {
+                if (this.timerTick.justUpdated) {
+                    this.sideEffect(() => {
+                        const worldSize = this.worldSize.value;
+                        for (const box of this.boxes.value) {
+                            if (box.position.value.x < 0 || box.position.value.x > worldSize.x
+                                || box.position.value.y < 0 || box.position.value.y > worldSize.y) {
+                                box.collisionMoment.updateWithAction();
+                            } else {
+                                for (const otherBox of this.boxes.value) {
+                                    if (box === otherBox) {
+                                        continue;
+                                    }
+                                    if (checkCollision(box.position.value, otherBox.position.value)) {
+                                        box.collisionMoment.updateWithAction();
+                                        otherBox.collisionMoment.updateWithAction();
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+            });
     }
+}
+
+function checkCollision(entity1Position: Vec2, entity2Position: Vec2): boolean {
+    // TODO: This is just simple rectangle intersection, should be taking velocity into account
+    const rectA = new PIXI.Rectangle(entity1Position.x, entity1Position.y, boxSize, boxSize);
+    const other = new PIXI.Rectangle(entity2Position.x, entity2Position.y, boxSize, boxSize);
+
+    const x0 = rectA.x < other.x ? other.x : rectA.x;
+    const x1 = rectA.right > other.right ? other.right : rectA.right;
+    if (x1 <= x0) {
+        return false;
+    }
+    const y0 = rectA.y < other.y ? other.y : rectA.y;
+    const y1 = rectA.bottom > other.bottom ? other.bottom : rectA.bottom;
+    return y1 > y0;
 }
 
 
