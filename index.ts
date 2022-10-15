@@ -22,14 +22,12 @@ class BoxExtent extends BG.Extent {
     velocity: BG.State<Vec2>;
 
     graphics: PIXI.Graphics;
-    game: GameExtent;
     collisionMomentWithStartingPos: BG.Moment<Vec2>;
 
-    constructor(graph: BG.Graph, initialPosition: Vec2, initialVelocity: Vec2, game: GameExtent) {
+    constructor(graph: BG.Graph, initialPosition: Vec2, initialVelocity: Vec2, timerTick: BG.Moment<number>) {
         super(graph);
         this.position = this.state(initialPosition);
         this.velocity = this.state(initialVelocity);
-        this.game = game;
         this.collisionMomentWithStartingPos = this.moment();
 
         const blueBoxGraphics = new PIXI.Graphics();
@@ -54,7 +52,7 @@ class BoxExtent extends BG.Extent {
         // Box movement
         this.behavior()
             .supplies(this.position)
-            .demands(this.game.timerTick, this.velocity, this.addedToGraph, this.collisionMomentWithStartingPos)
+            .demands(timerTick, this.velocity, this.addedToGraph, this.collisionMomentWithStartingPos)
             .runs(() => {
                 if (this.collisionMomentWithStartingPos.justUpdated && this.collisionMomentWithStartingPos.value) {
                     this.position.update({
@@ -126,9 +124,9 @@ class GameExtent extends BG.Extent {
                         this.graph,
                         { x: this.mouseClick.value!.x, y: this.mouseClick.value!.y },
                         { x: Math.random() * (maxVelocity - minVelocity) + minVelocity, y: Math.random() * (maxVelocity - minVelocity) + minVelocity },
-                        this,
+                        this.timerTick,
                     );
-                    this.addChildLifetime(box);
+                    this.addChildLifetime(box as unknown as BG.Extent);
                     box.addToGraph();
                     this.boxes.value.push(box);
                     this.boxes.updateForce(this.boxes.value);
