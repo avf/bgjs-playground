@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="tutorial3.css" />
+    <title>Behavior Graph Tutorial 3</title>
+</head>
+
+<body>
+
+    <div class="list-container">
+        <div class="title">
+            Todo List
+        </div>
+
+        <div class="list-header">
+            <span id="action">Add</span> Item: <input id="new-item-text" type="text" />
+            <button id="save">Save</button>
+        </div>
+        <ul id="list">
+        </ul>
+        <div class="list-footer">
+            <div>Remaining items: <span id="remaining-count"></span></div>
+        </div>
+        <div id="templates" style="display:none;">
+            <li class="list-item"><input class="completed-checkbox" type="checkbox" />
+                <div class="item-text"></div><button class="item-delete">Delete</button>
+            </li>
+        </div>
+
+    </div>
+
+    <script src="tutorial3.ts" type="module"></script>
+</body>
+
+</html>

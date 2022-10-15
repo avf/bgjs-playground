@@ -4,7 +4,7 @@
   "description": "",
   "source": "index.html",
   "scripts": {
-    "start": "parcel",
+    "start": "parcel *.html",
     "build": "parcel build",
     "test": "jest --watch"
   },
