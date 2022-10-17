@@ -140,33 +140,33 @@ class GameExtent extends BG.Extent {
         // Collision detection
         this.behavior()
             .demands(this.timerTick, this.worldSize, this.boxes)
-            .dynamicDemands([this.boxes], () => {
-                return this.boxes.value.map(box => box.position);
+            .dynamicSupplies([this.boxes], () => {
+                return this.boxes.value.map(box => box.collisionMomentWithStartingPos);
             })
             .runs(() => {
                 if (this.timerTick.justUpdated) {
-                    this.sideEffect(() => {
-                        const worldSize = this.worldSize.value;
-                        for (const box of this.boxes.value) {
-                            if (box.position.value.x < 0 || box.position.value.x > worldSize.x
-                                || box.position.value.y < 0 || box.position.value.y > worldSize.y) {
-                                const newX = Math.min(Math.max(box.position.value.x, 0), worldSize.x);
-                                const newY = Math.min(Math.max(box.position.value.y, 0), worldSize.y);
-                                box.collisionMomentWithStartingPos.updateWithAction({ x: newX, y: newY });
-                            } else {
-                                for (const otherBox of this.boxes.value) {
-                                    if (box === otherBox) {
-                                        continue;
-                                    }
-                                    if (checkCollision(box.position.value, otherBox.position.value)) {
-                                        // TODO: Calculate point of collision here and add it as the starting point to the update action
-                                        box.collisionMomentWithStartingPos.updateWithAction();
-                                        otherBox.collisionMomentWithStartingPos.updateWithAction();
-                                    }
+                    const worldSize = this.worldSize.value;
+                    for (const box of this.boxes.value) {                        
+                        const positionX = box.position.traceValue.x;
+                        const positionY = box.position.traceValue.y;
+                        if (positionX < 0 || positionX > worldSize.x
+                            || positionY < 0 || positionY > worldSize.y) {
+                            const newX = Math.min(Math.max(positionX, 0), worldSize.x);
+                            const newY = Math.min(Math.max(positionY, 0), worldSize.y);
+                            box.collisionMomentWithStartingPos.update({ x: newX, y: newY });
+                        } else {
+                            for (const otherBox of this.boxes.value) {
+                                if (box === otherBox) {
+                                    continue;
+                                }
+                                if (checkCollision(box.position.traceValue, otherBox.position.traceValue)) {
+                                    // TODO: Calculate point of collision here and add it as the starting point to the update action
+                                    box.collisionMomentWithStartingPos.update();
+                                    otherBox.collisionMomentWithStartingPos.update();
                                 }
                             }
                         }
-                    });
+                    }
                 }
             });
     }
