@@ -59,7 +59,7 @@ class BoxExtent extends BG.Extent {
                         x: this.collisionMomentWithStartingPos.value.x,
                         y: this.collisionMomentWithStartingPos.value.y
                     });
-                } else {
+                } else if (timerTick.justUpdated) {
                     this.position.update({
                         x: this.position.value.x + this.velocity.value.x,
                         y: this.position.value.y + this.velocity.value.y
@@ -139,14 +139,14 @@ class GameExtent extends BG.Extent {
 
         // Collision detection
         this.behavior()
-            .demands(this.timerTick, this.worldSize, this.boxes)
+            .demands(this.timerTick, this.worldSize)
             .dynamicSupplies([this.boxes], () => {
                 return this.boxes.value.map(box => box.collisionMomentWithStartingPos);
             })
             .runs(() => {
-                if (this.timerTick.justUpdated) {
+                if (this.timerTick.justUpdated || this.worldSize.justUpdated) {
                     const worldSize = this.worldSize.value;
-                    for (const box of this.boxes.value) {                        
+                    for (const box of this.boxes.traceValue) {
                         const positionX = box.position.traceValue.x;
                         const positionY = box.position.traceValue.y;
                         if (positionX < 0 || positionX > worldSize.x
@@ -155,7 +155,7 @@ class GameExtent extends BG.Extent {
                             const newY = Math.min(Math.max(positionY, 0), worldSize.y);
                             box.collisionMomentWithStartingPos.update({ x: newX, y: newY });
                         } else {
-                            for (const otherBox of this.boxes.value) {
+                            for (const otherBox of this.boxes.traceValue) {
                                 if (box === otherBox) {
                                     continue;
                                 }
