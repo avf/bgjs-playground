@@ -27,7 +27,7 @@ class ListExtent extends bg.Extent {
             .runs(() => {
                 if (this.save.justUpdated && this.selected.traceValue === null) {
                     const item = new ItemExtent(this.graph, this.save.value!, this);
-                    this.addChildLifetime(item);
+                    this.addChildLifetime(item as unknown as bg.Extent);
                     item.addToGraph();
                     this.allItems.value.push(item);
                     this.allItems.updateForce(this.allItems.value);
@@ -73,7 +73,7 @@ class ListExtent extends bg.Extent {
 
         this.behavior()
             .supplies(this.selected)
-            .demands(this.selectRequest, this.save)
+            .demands(this.selectRequest, this.save, this.removeItem)
             .runs(() => {
                 if (this.selectRequest.justUpdated) {
                     if (this.selected.value == this.selectRequest.value) {
@@ -81,7 +81,7 @@ class ListExtent extends bg.Extent {
                     } else {
                         this.selected.update(this.selectRequest.value!);
                     }
-                } else if (this.save.justUpdated) {
+                } else if (this.save.justUpdated || (this.removeItem.justUpdated && this.removeItem.value === this.selected.value)) {
                     this.selected.update(null);
                 }
 
