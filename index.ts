@@ -17,6 +17,14 @@ type Vec2 = {
 
 const boxSize = 100;
 
+function createPIXIBox(): PIXI.Graphics {
+    const blueBoxGraphics = new PIXI.Graphics();
+    blueBoxGraphics.beginFill(0x0000FF);
+    blueBoxGraphics.drawRect(0, 0, boxSize, boxSize);
+    blueBoxGraphics.endFill();
+    return blueBoxGraphics;
+}
+
 class BoxExtent extends BG.Extent {
     position: BG.State<Vec2>;
     velocity: BG.State<Vec2>;
@@ -30,11 +38,7 @@ class BoxExtent extends BG.Extent {
         this.velocity = this.state(initialVelocity);
         this.collisionMomentWithStartingPos = this.moment();
 
-        const blueBoxGraphics = new PIXI.Graphics();
-        blueBoxGraphics.beginFill(0x0000FF);
-        blueBoxGraphics.drawRect(0, 0, boxSize, boxSize);
-        blueBoxGraphics.endFill();
-        this.graphics = blueBoxGraphics;
+        this.graphics = createPIXIBox();
 
         // Collision handling
         this.behavior()
@@ -72,8 +76,8 @@ class BoxExtent extends BG.Extent {
             .demands(this.position)
             .runs(() => {
                 this.sideEffect(() => {
-                    blueBoxGraphics.position.x = this.position.value.x;
-                    blueBoxGraphics.position.y = this.position.value.y;
+                    this.graphics.position.x = this.position.value.x;
+                    this.graphics.position.y = this.position.value.y;
                 });
             });
 
