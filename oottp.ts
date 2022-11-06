@@ -71,6 +71,14 @@ window.requestAnimationFrame(time => {
 });
 
 
+// for (let i = 0; i < 1000000; i++) {
+//     allKeyEvents.push({
+//         keyCode: Math.random() > 0.5 ? "KeyS" : "KeyD",
+//         keydownTimestampMS: i / 1000,
+//         keyupTimestampMS: (i + 1) / 1000
+//     })
+// }
+
 const rootPixiContainer = initialPixiSetup();
 const pixiBox = createPIXIBox();
 rootPixiContainer.addChild(pixiBox);
@@ -84,46 +92,52 @@ function update(deltaTime: number): void {
 }
 
 function calculateRectanglePosition(currentTime: number, keyEvents: KeyEventData[], startingPositionAtBeginningOfGame: PIXI.Point): PIXI.Point {
-    const velocity = 0.5;
+    const velocity = 0.1;
 
     // This assumes key events are ordered by keyDownTimestamp
 
-    // Procedural style
-    // const result = startingPositionAtBeginningOfGame.clone();
-    // for (const event of keyEvents) {
-    //     const keyupTimeStamp = event.keyupTimestampMS ?? currentTime;
-    //     const timeKeyWasHeld = keyupTimeStamp - event.keydownTimestampMS;
-    //     const distanceToMove = velocity * timeKeyWasHeld;
-    //     if (event.keyCode == "KeyW") {
-    //         result.y -= distanceToMove;
-    //     } else if (event.keyCode == "KeyA") {
-    //         result.x -= distanceToMove;
-    //     } else if (event.keyCode == "KeyS") {
-    //         result.y += distanceToMove;
-    //     } else if (event.keyCode == "KeyD") {
-    //         result.x += distanceToMove;
-    //     }
-    // }
-    // return result;
+    const t0 = performance.now();
 
-    // Functional style
-    const reduced = keyEvents.map(event => {
-        const positionChange = new PIXI.Point(0, 0);
+    // Procedural style
+    const result = startingPositionAtBeginningOfGame.clone();
+    for (const event of keyEvents) {
         const keyupTimeStamp = event.keyupTimestampMS ?? currentTime;
         const timeKeyWasHeld = keyupTimeStamp - event.keydownTimestampMS;
         const distanceToMove = velocity * timeKeyWasHeld;
         if (event.keyCode == "KeyW") {
-            positionChange.y -= distanceToMove;
+            result.y -= distanceToMove;
         } else if (event.keyCode == "KeyA") {
-            positionChange.x -= distanceToMove;
+            result.x -= distanceToMove;
         } else if (event.keyCode == "KeyS") {
-            positionChange.y += distanceToMove;
+            result.y += distanceToMove;
         } else if (event.keyCode == "KeyD") {
-            positionChange.x += distanceToMove;
+            result.x += distanceToMove;
         }
-        return positionChange;
-    }).reduce((prev, curr) => new PIXI.Point(prev.x + curr.x, prev.y + curr.y), startingPositionAtBeginningOfGame);
+    }
 
-    return reduced;
+    console.log(keyEvents.length, performance.now() - t0);
+    return result;
+
+    // Functional style
+    // const reduced = keyEvents.map(event => {
+    //     const positionChange = new PIXI.Point(0, 0);
+    //     const keyupTimeStamp = event.keyupTimestampMS ?? currentTime;
+    //     const timeKeyWasHeld = keyupTimeStamp - event.keydownTimestampMS;
+    //     const distanceToMove = velocity * timeKeyWasHeld;
+    //     if (event.keyCode == "KeyW") {
+    //         positionChange.y -= distanceToMove;
+    //     } else if (event.keyCode == "KeyA") {
+    //         positionChange.x -= distanceToMove;
+    //     } else if (event.keyCode == "KeyS") {
+    //         positionChange.y += distanceToMove;
+    //     } else if (event.keyCode == "KeyD") {
+    //         positionChange.x += distanceToMove;
+    //     }
+    //     return positionChange;
+    // }).reduce((prev, curr) => new PIXI.Point(prev.x + curr.x, prev.y + curr.y), startingPositionAtBeginningOfGame);
+    // return reduced;
+
+
+
 }
 
