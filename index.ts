@@ -214,3 +214,42 @@ window.requestAnimationFrame(time => {
 
 
 
+
+
+type LockState = "Unlocked" | "Locked";
+
+class CoinMachine extends BG.Extent {
+    lockState: BG.State<LockState>;
+    coinMoment: BG.Moment<void>;
+    pushMoment: BG.Moment<void>;
+
+    constructor(graph: BG.Graph) {
+        super(graph);
+        this.lockState = this.state("Locked");
+        this.coinMoment = this.moment();
+        this.pushMoment = this.moment();
+
+
+        this.behavior()
+            .demands(this.coinMoment, this.pushMoment)
+            .supplies(this.lockState)
+            .runs(() => {
+                if (this.coinMoment.justUpdated) {
+                    this.lockState.update("Unlocked");
+                } else if (this.pushMoment.justUpdated) {
+                    this.lockState.update("Locked");
+                }
+                this.sideEffect(() => {
+                    console.log(this.lockState.value);
+                })
+            });
+
+    }
+}
+
+const coinMachine = new CoinMachine(g);
+coinMachine.addToGraphWithAction();
+coinMachine.action(() => {
+    coinMachine.coinMoment.update();
+});
+
