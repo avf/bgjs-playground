@@ -56,7 +56,7 @@ class BoxExtent extends BG.Extent {
         // Box movement
         this.behavior()
             .supplies(this.position)
-            .demands(timerTick, this.velocity, this.addedToGraph, this.collisionMomentWithStartingPos)
+            .demands(timerTick, this.velocity, this.collisionMomentWithStartingPos)
             .runs(() => {
                 if (this.collisionMomentWithStartingPos.justUpdated && this.collisionMomentWithStartingPos.value) {
                     this.position.update({
@@ -73,7 +73,7 @@ class BoxExtent extends BG.Extent {
 
         // Box rendering update (is it better to separate it like this, or leave it with the timertick demand?)
         this.behavior()
-            .demands(this.position)
+            .demands(this.position, this.addedToGraph)
             .runs(() => {
                 this.sideEffect(() => {
                     this.graphics.position.x = this.position.value.x;
