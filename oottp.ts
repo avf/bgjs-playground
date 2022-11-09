@@ -36,7 +36,7 @@ type KeyEventData = {
     keyupTimestampMS?: number;
 };
 
-const allKeyEvents: KeyEventData[] = [];
+let allKeyEvents: KeyEventData[] = [];
 window.addEventListener('keydown', (e) => {
     if (e.repeat) {
         return;
@@ -71,24 +71,30 @@ window.requestAnimationFrame(time => {
 });
 
 
-// for (let i = 0; i < 1000000; i++) {
-//     allKeyEvents.push({
-//         keyCode: Math.random() > 0.5 ? "KeyS" : "KeyD",
-//         keydownTimestampMS: i / 1000,
-//         keyupTimestampMS: (i + 1) / 1000
-//     })
-// }
+for (let i = 0; i < 1000000; i++) {
+    allKeyEvents.push({
+        keyCode: Math.random() > 0.5 ? "KeyS" : "KeyD",
+        keydownTimestampMS: i / 1000,
+        keyupTimestampMS: (i + 1) / 1000
+    })
+}
 
 const rootPixiContainer = initialPixiSetup();
 const pixiBox = createPIXIBox();
 rootPixiContainer.addChild(pixiBox);
 
 let currentTime = 0;
+let startPosition = new PIXI.Point(0, 0);
 function update(deltaTime: number): void {
     currentTime += deltaTime;
-    const position = calculateRectanglePosition(currentTime, allKeyEvents, new PIXI.Point(0, 0));
+    const position = calculateRectanglePosition(currentTime, allKeyEvents, startPosition);
     pixiBox.x = position.x;
     pixiBox.y = position.y;
+
+    if (allKeyEvents.length > 20) {
+        allKeyEvents = [];
+        startPosition = position;
+    }
 }
 
 function calculateRectanglePosition(currentTime: number, keyEvents: KeyEventData[], startingPositionAtBeginningOfGame: PIXI.Point): PIXI.Point {
