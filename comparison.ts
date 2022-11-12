@@ -44,14 +44,68 @@ playhead.moveTo(-20, 0);
 playhead.lineTo(playAreaWidth + 20, 0);
 playArea.addChild(playhead);
 
-
+// Start shared code
 const velocity = 0.05;
-function updateProcedural(deltaTime: number): void {
-    playhead.y += deltaTime * velocity;
-    if (playhead.y > playAreaHeight) {
-        playhead.y = playhead.y - playAreaHeight;
+// End shared code
+
+// Start Procedural
+// function updateProcedural(deltaTime: number): void {
+//     playhead.y += deltaTime * velocity;
+//     if (playhead.y > playAreaHeight) {
+//         playhead.y = playhead.y - playAreaHeight;
+//     }
+// }
+// End Procedural
+
+// Start OOTTP
+type EventData = EventDataUpdate;
+
+type EventDataUpdate = {
+    eventType: "update",
+    data: {
+        deltaTime: number,
+    }
+};
+
+type OutputData = {
+    playheadY: number,
+};
+
+const events: EventData[] = [];
+function updateOOTTP(deltaTime: number): void {
+    events.push({
+        eventType: "update",
+        data: {
+            deltaTime: deltaTime,
+        }
+    });
+
+    const outputData = calculateOOTTPInputToOutputData(events);
+    renderOOTTP(outputData);
+}
+
+function calculateOOTTPInputToOutputData(events: EventData[]): OutputData {
+    
+    let playheadY = 0;
+    for (const event of events) {
+        if (event.eventType === "update") {
+            playheadY += event.data.deltaTime * velocity;
+            if (playheadY > playAreaHeight) {
+                playheadY = playheadY - playAreaHeight;
+            }
+        }
+    }
+    return {
+        playheadY: playheadY,
     }
 }
+
+function renderOOTTP(outputData: OutputData): void {
+    // "Render"
+    playhead.y = outputData.playheadY;
+}
+// End OOTTP
+
 
 let previousTime = 0;
 const loop = (time: number): void => {
@@ -59,7 +113,8 @@ const loop = (time: number): void => {
     const deltaTime = time - previousTime;
     previousTime = time;
 
-    updateProcedural(deltaTime);
+    // updateProcedural(deltaTime);
+    updateOOTTP(deltaTime);
 
     window.requestAnimationFrame(loop);
 };
