@@ -83,6 +83,12 @@ type EventDataKeyUp = {
     }
 };
 
+type KeyEventData = {
+    keyCode: string;
+    keydownTimestampMS: number;
+    keyupTimestampMS?: number;
+};
+
 type OutputData = {
     playheadY: number,
     playedKeyRectangles: PIXI.Rectangle[],
@@ -109,24 +115,33 @@ function calculateOOTTPInputToOutputData(events: EventData[]): OutputData {
         .map(e => (e as EventDataUpdate).data.deltaTime)
         .reduce((a, b) => a + b);
     const playheadYForCurrentTime = calculatePlayheadY(currentTime);
-    const playedKeyRectangles: PIXI.Rectangle[] = [];
-    let lastY = 0;
-    for (const event of events) {
-        if (event.eventType === "keyDown") {
-            if (event.data.keyCode === "Space") {
-                lastY = calculatePlayheadY(event.data.timestamp);
-                playedKeyRectangles.push(new PIXI.Rectangle(0, lastY, playAreaWidth, playheadYForCurrentTime - lastY));
-
-                // TODO: There's still a bug when the key is held down longer than the playAreaHeight
-                // In that case, 2 rectangles would have to be drawn (one from the event timestamp to playAreaHeight, and one from playAreaHeight to currentTime)
-            }
-        } else if (event.eventType === "keyUp") {
-            if (event.data.keyCode === "Space") {
-                const lastRectangle = playedKeyRectangles[playedKeyRectangles.length - 1];
-                lastRectangle.height = calculatePlayheadY(event.data.timestamp) - lastY;
+    const allKeyEventData: KeyEventData[] = [];
+    const keyEvents = events.filter(e => e.eventType === "keyDown" || e.eventType === "keyUp");
+    // The following loop could probably be replaced with a reduce or flatMap, which would make this pure again
+    for (const keyEvent of keyEvents) {
+        if (keyEvent.eventType === "keyDown") {
+            allKeyEventData.push({
+                keyCode: keyEvent.data.keyCode,
+                keydownTimestampMS: keyEvent.data.timestamp,
+            });
+        } else if (keyEvent.eventType === "keyUp") {
+            for (let i = allKeyEventData.length - 1; i >= 0; i--) {
+                const previousKeyEvent = allKeyEventData[i];
+                if (previousKeyEvent.keyCode === keyEvent.data.keyCode) {
+                    previousKeyEvent.keyupTimestampMS = keyEvent.data.timestamp;
+                    break;
+                }
             }
         }
     }
+    const playedKeyRectangles: PIXI.Rectangle[] = allKeyEventData
+        .filter(keyEvent => keyEvent.keyCode === "Space")
+        .map(keyEvent => {
+            const y = calculatePlayheadY(keyEvent.keydownTimestampMS);
+            const endTime = keyEvent.keyupTimestampMS ?? currentTime;
+            const height = calculatePlayheadY(endTime) - y;
+            return new PIXI.Rectangle(0, y, playAreaWidth, height);
+        });
 
     return {
         playheadY: playheadYForCurrentTime,
