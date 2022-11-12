@@ -32,7 +32,7 @@ function createPIXIBox(width: number, height: number, fillColor: number | undefi
 
 const rootPixiContainer = initialPixiSetup();
 const playAreaWidth = 100;
-const playAreaHeight = 100;
+const playAreaHeight = 400;
 const playArea = createPIXIBox(playAreaWidth, playAreaHeight, 0xFFFFFF);
 playArea.x = 100;
 playArea.y = 100;
@@ -58,7 +58,7 @@ const velocity = 0.05;
 // End Procedural
 
 // Start OOTTP
-type EventData = EventDataUpdate;
+type EventData = EventDataUpdate | EventDataKeyUp | EventDataKeyDown;
 
 type EventDataUpdate = {
     eventType: "update",
@@ -67,12 +67,31 @@ type EventDataUpdate = {
     }
 };
 
+type EventDataKeyDown = {
+    eventType: "keyDown",
+    data: {
+        timestamp: number,
+        keyCode: string,
+    }
+};
+
+type EventDataKeyUp = {
+    eventType: "keyUp",
+    data: {
+        timestamp: number,
+        keyCode: string,
+    }
+};
+
 type OutputData = {
     playheadY: number,
+    playedKeyRectangles: PIXI.Rectangle[],
 };
 
 const events: EventData[] = [];
+let accumulatedCurrentTime = 0;
 function updateOOTTP(deltaTime: number): void {
+    accumulatedCurrentTime += deltaTime;
     events.push({
         eventType: "update",
         data: {
@@ -85,25 +104,94 @@ function updateOOTTP(deltaTime: number): void {
 }
 
 function calculateOOTTPInputToOutputData(events: EventData[]): OutputData {
-    
-    let playheadY = 0;
+
+    const currentTime = events.filter(e => e.eventType === "update")
+        .map(e => (e as EventDataUpdate).data.deltaTime)
+        .reduce((a, b) => a + b);
+    const playheadYForCurrentTime = calculatePlayheadY(currentTime);
+    const playedKeyRectangles: PIXI.Rectangle[] = [];
+    let lastY = 0;
     for (const event of events) {
-        if (event.eventType === "update") {
-            playheadY += event.data.deltaTime * velocity;
-            if (playheadY > playAreaHeight) {
-                playheadY = playheadY - playAreaHeight;
+        if (event.eventType === "keyDown") {
+            if (event.data.keyCode === "Space") {
+                lastY = calculatePlayheadY(event.data.timestamp);
+                playedKeyRectangles.push(new PIXI.Rectangle(0, lastY, playAreaWidth, playheadYForCurrentTime - lastY));
+
+                // TODO: There's still a bug when the key is held down longer than the playAreaHeight
+                // In that case, 2 rectangles would have to be drawn (one from the event timestamp to playAreaHeight, and one from playAreaHeight to currentTime)
+            }
+        } else if (event.eventType === "keyUp") {
+            if (event.data.keyCode === "Space") {
+                const lastRectangle = playedKeyRectangles[playedKeyRectangles.length - 1];
+                lastRectangle.height = calculatePlayheadY(event.data.timestamp) - lastY;
             }
         }
     }
+
     return {
-        playheadY: playheadY,
+        playheadY: playheadYForCurrentTime,
+        playedKeyRectangles: playedKeyRectangles,
     }
 }
 
+function calculatePlayheadY(currentTime: number): number {
+    return (currentTime * velocity) % playAreaHeight;
+}
+
+let playedKeyGraphics: PIXI.Graphics[] = [];
 function renderOOTTP(outputData: OutputData): void {
     // "Render"
     playhead.y = outputData.playheadY;
+
+
+    for (const playedKeyGraphicsObject of playedKeyGraphics) {
+        playedKeyGraphicsObject.destroy();
+    }
+    playedKeyGraphics = [];
+
+    for (const rectangle of outputData.playedKeyRectangles) {
+        const graphics = new PIXI.Graphics();
+        playedKeyGraphics.push(graphics);
+        graphics.lineStyle(1, 0x000000, 1);
+        graphics.beginFill(0xFF0000);
+        graphics.drawRect(0, 0, rectangle.width, rectangle.height);
+        graphics.endFill();
+        graphics.x = rectangle.x;
+        graphics.y = rectangle.y;
+        graphics.visible = true;
+        graphics.alpha = 0.7;
+        playArea.addChild(graphics);
+    }
+
 }
+
+const allowedKeyCodes = ["Space"];
+window.addEventListener('keydown', (e) => {
+    if (allowedKeyCodes.includes(e.code)) {
+        if (e.repeat) {
+            return;
+        }
+        events.push({
+            eventType: "keyDown",
+            data: {
+                timestamp: accumulatedCurrentTime,
+                keyCode: e.code,
+            }
+        });
+    }
+});
+
+window.addEventListener('keyup', (e) => {
+    if (allowedKeyCodes.includes(e.code)) {
+        events.push({
+            eventType: "keyUp",
+            data: {
+                timestamp: accumulatedCurrentTime,
+                keyCode: e.code,
+            }
+        });
+    }
+});
 // End OOTTP
 
 
