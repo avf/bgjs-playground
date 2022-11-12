@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <title>Comparison</title>
+    <style>
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: "Helvetica", sans-serif;
+            font-size: small;
+            height: 100%;
+
+            /* Needed to prevent "overscrolling" or "spring" or "tension scrolling" behavior when scrolling with pixi-viewport: https://stackoverflow.com/questions/12046315/prevent-overscrolling-of-web-page */
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+    <div style="display: flex; flex-direction: column; height: 100%;">
+        <div id="pixi-container" style="flex: 1 1 0; min-height: 0;"></div>
+    </div>
+    <script src="comparison.ts" type="module"></script>
+</body>
+
+</html>
