@@ -16,7 +16,8 @@
     "lodash": "^4.17.21",
     "pixi-cull": "^2.2.0",
     "pixi-viewport": "^4.34.4",
-    "pixi.js": "^6.2.2"
+    "pixi.js": "^6.2.2",
+    "xstate": "^4.34.0"
   },
   "devDependencies": {
     "@parcel/config-default": "^2.3.2",

@@ -1,6 +1,7 @@
 import * as _ from 'lodash'
 import * as BG from 'behavior-graph'
 import * as PIXI from 'pixi.js'
+import { Moment } from './bgjs/src';
 
 // Fixes a problem with live reload in the parcel bundler. See this issue: https://github.com/parcel-bundler/parcel/issues/289
 declare let module: any;
@@ -253,3 +254,125 @@ coinMachine.action(() => {
     coinMachine.coinMoment.update();
 });
 
+
+type DogWalkState =
+    Waiting
+    | OnAWalk
+    | WalkComplete;
+
+type DogWalkEvent =
+    "leave home"
+    | "arrive home";
+
+
+type OnAWalkState =
+    "Walking"
+    | "Running"
+    | "StoppingToSniff";
+
+class DogWalk extends BG.Extent {
+    dogWalkState: BG.State<DogWalkState> = this.state({ type: "Waiting" });
+    eventMoment: BG.Moment<DogWalkEvent> = this.moment();
+
+    constructor(graph: BG.Graph) {
+        super(graph);
+
+        this.behavior()
+            .demands(this.eventMoment)
+            .supplies(this.dogWalkState)
+            .runs(() => {
+                if (this.eventMoment.justUpdatedTo("leave home")) {
+                    if (this.dogWalkState.value.type === "Waiting") {
+                        const onAWalkExtent = new OnAWalkExtent(this.graph);
+                        this.addChildLifetime(onAWalkExtent as unknown as BG.Extent);
+                        onAWalkExtent.addToGraph();
+
+                        this.dogWalkState.update({
+                            type: "OnAWalk",
+                            state: onAWalkExtent,
+                        });
+                    }
+                } else if (this.eventMoment.justUpdatedTo("arrive home")) {
+                    if (this.dogWalkState.value.type === "OnAWalk") {
+                        this.dogWalkState.value.state.removeFromGraph();
+                        this.dogWalkState.update({ type: "WalkComplete" });
+                    }
+                }
+                this.sideEffect(() => {
+                    console.log("state changed to: ", this.dogWalkState.value);
+                });
+            });
+
+    }
+}
+
+type Waiting = {
+    type: "Waiting",
+};
+
+type OnAWalk = {
+    type: "OnAWalk",
+    state: OnAWalkExtent,
+};
+
+type WalkComplete = {
+    type: "WalkComplete",
+};
+
+type OnAWalkEvent =
+    "speed up"
+    | "slow down"
+    | "stop"
+    | "sudden speed up"
+    | "sudden stop";
+
+
+class OnAWalkExtent extends BG.Extent {
+    onAWalkState: BG.State<OnAWalkState> = this.state("Walking");
+    eventMoment: BG.Moment<OnAWalkEvent> = this.moment();
+
+    constructor(graph: BG.Graph) {
+        super(graph);
+
+        this.behavior()
+            .demands(this.eventMoment)
+            .supplies(this.onAWalkState)
+            .runs(() => {
+                if (this.eventMoment.justUpdatedTo("speed up")) {
+                    if (this.onAWalkState.value === "Walking") {
+                        this.onAWalkState.update("Running");
+                    } else if (this.onAWalkState.value === "StoppingToSniff") {
+                        this.onAWalkState.update("Walking");
+                    }
+                } else if (this.eventMoment.justUpdatedTo("slow down")) {
+                    if (this.onAWalkState.value === "Running") {
+                        this.onAWalkState.update("Walking");
+                    }
+                } else if (this.eventMoment.justUpdatedTo("stop")) {
+                    if (this.onAWalkState.value === "Walking") {
+                        this.onAWalkState.update("StoppingToSniff");
+                    }
+                } else if (this.eventMoment.justUpdatedTo("sudden speed up")) {
+                    if (this.onAWalkState.value === "StoppingToSniff") {
+                        this.onAWalkState.update("Running");
+                    }
+                } else if (this.eventMoment.justUpdatedTo("sudden stop")) {
+                    if (this.onAWalkState.value === "Running") {
+                        this.onAWalkState.update("StoppingToSniff");
+                    }
+                }
+                this.sideEffect(() => {
+                    console.log("state changed to: ", this.onAWalkState.value);
+                });
+            });
+    }
+}
+
+
+const dogWalk = new DogWalk(g);
+dogWalk.addToGraphWithAction();
+dogWalk.eventMoment.updateWithAction("leave home");
+// The following does not work, how to send events to the compound state?
+// if (dogWalk.dogWalkState.value.type === "OnAWalk") {
+//     dogWalk.dogWalkState.value.state.onAWalkState.updateWithAction("Running");
+// }
